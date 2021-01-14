@@ -1,13 +1,15 @@
 name: Build and publish Oracle Linux developer container images to GitHub Container Registry
 
 # Builds are triggered either by:
-#   - a push on the master branch with changes in this file or in the
-#     OracleLinuxDevelopers directory.
+#   - a push on the master branch with changes in this file.
 #     All container images will be (re)built.
+#   - a push on the master branch with changes the OracleLinuxDevelopers
+#     directory.
+#     Affected container images will be (re)built.
 #   - a manual trigger of the workflow using the API.
 #     Subset of OL version / language can be specified; default is to build
 #     all images.
-# Images are build for both amd64 and arm64 architectures, except for
+# Images are built for both amd64 and arm64 architectures, except for
 #   - oracledb images (not available on arm)
 #   - php and nodejs on OL7 (packages not available)
 on:
@@ -38,17 +40,19 @@ env:
 
 jobs:
   prepare:
-    name: Build os/language matrix
+    name: Create build matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.matrix }}
-      build: ${{ steps.build-matrix.outputs.build }}
+      skip_build: ${{ steps.build-matrix.outputs.skip_build }}
       repository_owner: ${{ steps.repository_owner.outputs.repository_owner }}
       date_stamp: ${{ steps.date_stamp.outputs.date_stamp }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
         with:
+          # We need "some" commit history to check for changed files
           fetch-depth: 32
 
       - name: Build matrix
@@ -57,10 +61,11 @@ jobs:
         run: |
           ol_list=$(echo "${{ github.event.inputs.ol || env.ol}}" | sed -e 's/[ ,]\+/ /g')
           lang_list=$(echo "${{ github.event.inputs.lang || env.lang}}" | sed -e 's/[ ,]\+/ /g')
-          workflow="${{ github.event.workflow }}"
           changes=$(mktemp)
+          # workflow is only in the workflow_dispatch event payload
+          workflow="${{ github.event.workflow }}"
           if [[ -z ${workflow} ]]; then
-            # push event
+            # Push event - retrieve list of changed files
             git diff --name-only '${{ github.event.before }}..${{ github.event.after }}' > "${changes}"
             if grep -q build-and-push-dev-images.yml "${changes}"; then
               echo "PUSH: Action updated, rebuilding all images"
@@ -70,7 +75,7 @@ jobs:
               build_all=0
             fi
           else
-            echo "WORKFLOW: Rebuilding based on parameters"
+            echo "MANUAL: Rebuilding based on parameters"
             build_all=1
           fi
           matrix=$(
@@ -101,13 +106,14 @@ jobs:
           )
           rm "${changes}"
           if [[ ${matrix} == "[]" ]]; then
-            build=false
+            # Empty array -- change didn't impact any image
+            skip_build=true
           else
-            build=true
+            skip_build=false
             matrix=$(jq --compact-output '{ "include": .}' <<<"${matrix}")
           fi
           echo "::set-output name=matrix::${matrix}"
-          echo "::set-output name=build::${build}"
+          echo "::set-output name=skip_build::${skip_build}"
 
       - name: Lowercase repository owner
         id: repository_owner
@@ -122,7 +128,7 @@ jobs:
   build-image:
     name: Build image
     needs: prepare
-    if: ${{ needs.prepare.outputs.build == 'true' }}
+    if: ${{ needs.prepare.outputs.skip_build == 'false' }}
     strategy:
       matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
       fail-fast: false
@@ -146,9 +152,10 @@ jobs:
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Build image - amd64 single
+      - name: Build image - amd64 single-arch
         uses: docker/build-push-action@v2
-        if: ${{ ! matrix.multi }}
+        # if: ${{ ! matrix.multi }}
+        if: ${{ false }}
         with:
           context: OracleLinuxDevelopers/${{ matrix.ol }}/${{ matrix.lang }}/${{ matrix.tag }}
           platforms: linux/amd64
@@ -157,16 +164,16 @@ jobs:
             "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}"
             "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}"
 
-      - name: Build image - amd64 multi
+      - name: Build image - amd64 multi-arch
         uses: docker/build-push-action@v2
-        if: matrix.multi
+        # if: matrix.multi
         with:
           context: OracleLinuxDevelopers/${{ matrix.ol }}/${{ matrix.lang }}/${{ matrix.tag }}
           platforms: linux/amd64
           push: true
           tags: |
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}-amd64"
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-amd64"
+            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}{{ matrix.multi && '-amd64' || '' }}"
+            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}{{ matrix.multi && '-amd64' || '' }}"
 
       - name: Build image - arm64
         uses: docker/build-push-action@v2
