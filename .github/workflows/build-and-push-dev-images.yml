@@ -172,8 +172,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}{{ matrix.multi && '-amd64' || '' }}"
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}{{ matrix.multi && '-amd64' || '' }}"
+            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}${{ matrix.multi && '-amd64' || '' }}"
+            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}${{ matrix.multi && '-amd64' || '' }}"
 
       - name: Build image - arm64
         uses: docker/build-push-action@v2
