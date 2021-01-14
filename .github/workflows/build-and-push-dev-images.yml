@@ -101,9 +101,11 @@ jobs:
           )
           rm "${changes}"
           if [[ -n matrix ]]; then
+            echo "Some  build!!!!"
             build=true
             matrix=$(jq --compact-output '{ "include": .}' <<<"${matrix}")
           else
+            echo "No build!!!!"
             build=false
           fi
           echo "::set-output name=matrix::${matrix}"
