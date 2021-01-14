@@ -54,11 +54,27 @@ jobs:
         run: |
           ol_list=$(echo "${{ github.event.inputs.ol || env.ol}}" | sed -e 's/[ ,]\+/ /g')
           lang_list=$(echo "${{ github.event.inputs.lang || env.lang}}" | sed -e 's/[ ,]\+/ /g')
+          workflow="${{ github.event.workflow }}"
+          changes=$(mktemp)
+          if [[ -z ${workflow} ]]; then
+            # push event
+            git diff --name-only '${{ github.event.before }}..${{ github.event.after }}' > "${changes}"
+            if grep -q build-and-push-dev-images.yml "${changes}"; then
+              echo "PUSH: Action updated, rebuilding all images"
+              build_all=1
+            else
+              echo "PUSH: Rebuilding changed images only"
+              build_all=0
+            fi
+          else
+            echo "WORKFLOW: Rebuilding based on parameters"
+            build_all=1
+          fi
           matrix=$(
             for ol in ${ol_list}; do
-              pushd "${ol}" >/dev/null
+            pushd "${ol}" >/dev/null
                 for lang in ${lang_list}; do
-                  pushd "${lang}" >/dev/null
+                pushd "${lang}" >/dev/null
                     for tag in *; do
                       arch="linux/amd64"
                       multi=0
@@ -66,7 +82,9 @@ jobs:
                         arch="${arch},linux/arm64"
                         multi=1
                       fi
-                      echo "${ol};${lang};${tag};${arch};${multi}"
+                      if [[ ${build_all} -eq 1 ]] || grep -q "${ol}/${lang}/${tag}" "${changes}"; then
+                        echo "${ol};${lang};${tag};${arch};${multi}"
+                      fi
                     done
                   popd >/dev/null
                 done
@@ -78,6 +96,7 @@ jobs:
               map({"ol": .[0], "lang": .[1], "tag": .[2], "arch": .[3], "multi": (.[4] == "1")}) |
               { "include": .}'
           )
+          rm "${changes}"
           echo "::set-output name=matrix::${matrix}"
 
       - name: Lowercase repository owner
