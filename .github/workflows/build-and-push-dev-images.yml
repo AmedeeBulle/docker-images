@@ -102,6 +102,7 @@ jobs:
           rm "${changes}"
           if [[ ${matrix} == "[]" ]]; then
             build=false
+            echo "Build set to false!"
           else
             build=true
             matrix=$(jq --compact-output '{ "include": .}' <<<"${matrix}")
@@ -122,7 +123,7 @@ jobs:
   build-image:
     name: Build image
     needs: prepare
-    if: ${{ needs.prepare.outputs.build }}
+    if: ${{ needs.prepare.outputs.build == 'true' }}
     strategy:
       matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
       fail-fast: false
