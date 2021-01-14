@@ -42,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.matrix }}
+      build: ${{ steps.build-matrix.outputs.build }}
       repository_owner: ${{ steps.repository_owner.outputs.repository_owner }}
       date_stamp: ${{ steps.date_stamp.outputs.date_stamp }}
     steps:
@@ -96,11 +97,17 @@ jobs:
               split("\n") |
               .[:-1] |
               map(split(";")) |
-              map({"ol": .[0], "lang": .[1], "tag": .[2], "arch": .[3], "multi": (.[4] == "1")}) |
-              { "include": .}'
+              map({"ol": .[0], "lang": .[1], "tag": .[2], "arch": .[3], "multi": (.[4] == "1")})'
           )
           rm "${changes}"
+          if [[ -n matrix ]]; then
+            build=true
+            matrix=$(jq --compact-output '{ "include": .}' <<<"${matrix}")
+          else
+            build=false
+          fi
           echo "::set-output name=matrix::${matrix}"
+          echo "::set-output name=build::${build}"
 
       - name: Lowercase repository owner
         id: repository_owner
@@ -115,7 +122,7 @@ jobs:
   build-image:
     name: Build image
     needs: prepare
-    if: ${{ fromJson(needs.prepare.outputs.matrix).include }}
+    if: ${{ needs.prepare.outputs.build }}
     strategy:
       matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
       fail-fast: false
