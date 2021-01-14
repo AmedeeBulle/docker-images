@@ -152,21 +152,8 @@ jobs:
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Build image - amd64 single-arch
+      - name: Build image - amd64
         uses: docker/build-push-action@v2
-        # if: ${{ ! matrix.multi }}
-        if: ${{ false }}
-        with:
-          context: OracleLinuxDevelopers/${{ matrix.ol }}/${{ matrix.lang }}/${{ matrix.tag }}
-          platforms: linux/amd64
-          push: true
-          tags: |
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}"
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}"
-
-      - name: Build image - amd64 multi-arch
-        uses: docker/build-push-action@v2
-        # if: matrix.multi
         with:
           context: OracleLinuxDevelopers/${{ matrix.ol }}/${{ matrix.lang }}/${{ matrix.tag }}
           platforms: linux/amd64
@@ -189,11 +176,12 @@ jobs:
       - name: Manifest
         if: matrix.multi
         run: |
-          docker buildx imagetools create -t \
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}" \
+          docker buildx imagetools create \
+            --tag "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}" \
+            --tag "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}" \
             "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}-amd64" \
             "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}-arm64"
-          docker buildx imagetools create -t \
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}" \
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-amd64" \
-            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-arm64"
+          #docker buildx imagetools create -t \
+          #  "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}" \
+          #  "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-amd64" \
+          #  "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-arm64"
