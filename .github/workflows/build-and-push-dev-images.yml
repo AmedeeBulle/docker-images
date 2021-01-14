@@ -129,7 +129,7 @@ jobs:
 
       - name: Build image - amd64
         uses: docker/build-push-action@v2
-        if: ! matrix.multi
+        if: ${{ ! matrix.multi }}
         with:
           context: OracleLinuxDevelopers/${{ matrix.ol }}/${{ matrix.lang }}/${{ matrix.tag }}
           platforms: linux/amd64
