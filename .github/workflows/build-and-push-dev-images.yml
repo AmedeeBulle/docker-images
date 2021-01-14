@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - master
+      - build-tags
     paths:
       - 'OracleLinuxDevelopers/**'
       - '.github/workflows/build-and-push-dev-images.yml'
@@ -30,15 +31,19 @@ on:
 
 # Default values for the builds triggered by the push event
 env:
-  ol: 'oraclelinux7, oraclelinux8'
-  lang: 'golang, nodejs, php, python'
+  # ol: 'oraclelinux7, oraclelinux8'
+  # lang: 'golang, nodejs, php, python'
+  ol: 'oraclelinux7'
+  lang: 'python'
 
 jobs:
-  build-matrix:
+  prepare:
     name: Build os/language matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.build-matrix.outputs.matrix }}
+      repository_owner: ${{ steps.repository_owner.outputs.repository_owner }}
+      date_stamp: ${{ steps.date_stamp.outputs.date_stamp }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -73,11 +78,21 @@ jobs:
           )
           echo "::set-output name=matrix::${matrix}"
 
+      - name: Lowercase repository owner
+        id: repository_owner
+        run: |
+          echo "::set-output name=repository_owner::$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+
+      - name: Date stamp
+        id: date_stamp
+        run: |
+          echo "::set-output name=date_stamp::$(date +'%Y%m%d-%H%M')"
+
   build-images:
     name: Build and push images
-    needs: build-matrix
+    needs: prepare
     strategy:
-      matrix: ${{fromJson(needs.build-matrix.outputs.matrix)}}
+      matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
@@ -99,10 +114,16 @@ jobs:
           username: ${{ secrets.GHCR_USER }}
           password: ${{ secrets.GHCR_TOKEN }}
 
+      - name: Lowercase repository owner
+        run: |
+          echo "repository_owner=\"${{ github.repository_owner }}\"" | tr '[:upper:]' '[:lower:]' >> ${GITHUB_ENV}
+
       - name: Build and push image
         uses: docker/build-push-action@v2
         with:
           context: OracleLinuxDevelopers/${{ matrix.ol }}/${{ matrix.lang }}/${{ matrix.tag }}
           platforms: ${{ matrix.arch }}
           push: true
-          tags: "ghcr.io/${{ github.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}"
+          tags: |
+            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}"
+            "ghcr.io/${{ needs.prepare.outputs.repository_owner }}/${{ matrix.ol }}-${{ matrix.lang }}:${{ matrix.tag }}-${{ needs.prepare.outputs.date_stamp }}"
