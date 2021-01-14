@@ -112,9 +112,10 @@ jobs:
         run: |
           echo "::set-output name=date_stamp::$(date +'%Y%m%d-%H%M')"
 
-  build-images:
-    name: Build and push images
+  build-image:
+    name: Build image
     needs: prepare
+    if: ${{ fromJson(needs.prepare.outputs.matrix).include }}
     strategy:
       matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
       fail-fast: false
