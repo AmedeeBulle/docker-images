@@ -47,6 +47,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 32
 
       - name: Build matrix
         id: build-matrix
