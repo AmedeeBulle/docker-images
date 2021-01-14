@@ -97,7 +97,7 @@ jobs:
               split("\n") |
               .[:-1] |
               map(split(";")) |
-              map({"ol": .[0], "lang": .[1], "tag": .[2], "arch": .[3], "multi": (.[4] == "1")}) |'
+              map({"ol": .[0], "lang": .[1], "tag": .[2], "arch": .[3], "multi": (.[4] == "1")})'
           )
           rm "${changes}"
           if [[ ${matrix} == "[]" ]]; then
