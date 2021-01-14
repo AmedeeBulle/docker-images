@@ -100,7 +100,7 @@ jobs:
               map({"ol": .[0], "lang": .[1], "tag": .[2], "arch": .[3], "multi": (.[4] == "1")})'
           )
           rm "${changes}"
-          if [[ -n matrix ]]; then
+          if [[ -n ${matrix} ]]; then
             echo "Some  build!!!!"
             build=true
             matrix=$(jq --compact-output '{ "include": .}' <<<"${matrix}")
