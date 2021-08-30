@@ -16,26 +16,22 @@ on:
       - '.github/workflows/build-and-push-dev-compat.yml'
   workflow_dispatch:
 
-
-# Default values for the builds triggered by the push event
-env:
-  ol: 'oraclelinux7, oraclelinux8'
-  lang: 'compat, golang, nodejs, php, python, ruby'
-
 jobs:
   build-image:
     name: Build image
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
       - name: locals
         id: locals
+        working-directory: OracleLinuxDevelopers/oraclelinux8
         run: |
           echo "::set-output name=repository_owner::$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           echo "::set-output name=date_stamp::$(date +'%Y%m%d')"
-          echo "::set-output name=lang::ruby"
-
-      - name: Checkout repo
-        uses: actions/checkout@v2
+          readarray -t lang < <(grep -l '^FROM.*oraclelinux8-compat:8-slim'  */*/Dockerfile | sed -e 's!/.*!!' | sort -u)
+          echo "::set-output name=lang::${lang[*]}"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -85,6 +81,7 @@ jobs:
 
       - name: Trigger dependencies
         uses: benc-uk/workflow-dispatch@v1
+        if: ${{ steps.locals.outputs.lang != '' }}
         with:
           workflow: Build and publish Oracle Linux developer container images to GitHub Container Registry
           token: ${{ secrets.PERSONAL_TOKEN }}
