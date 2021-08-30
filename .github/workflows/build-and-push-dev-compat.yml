@@ -12,7 +12,7 @@ on:
       - main
       - workflow
     paths:
-      - 'OracleLinuxDevelopers/oraclelinux8/compat/*'
+      - 'OracleLinuxDevelopers/oraclelinux8/compat/**'
       - '.github/workflows/build-and-push-dev-compat.yml'
   workflow_dispatch:
 
