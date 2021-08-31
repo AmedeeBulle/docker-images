@@ -8,7 +8,7 @@ FROM ghcr.io/oracle/oraclelinux8-compat:8-slim
 # Enable the right module stream for microdnf
 COPY go-toolset.module /etc/dnf/modules.d/go-toolset.module
 
-RUN dnf -y module enable go-toolset:ol8 &&  \
+RUN dnf -y module enable go-toolset:ol8 && \
     dnf -y install go-toolset && \
     rm -rf /var/cache/dnf
 
