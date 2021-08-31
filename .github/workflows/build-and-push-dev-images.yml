@@ -68,9 +68,11 @@ jobs:
           if [[ -z ${workflow} ]]; then
             # Push event - retrieve list of changed files
             git diff --name-only '${{ github.event.before }}..${{ github.event.after }}' > "${changes}"
+            compat=0
             if grep -q build-and-push-dev-images.yml "${changes}"; then
               echo "PUSH: Action updated, rebuilding all images"
               build_all=1
+              compat=1
             else
               echo "PUSH: Rebuilding changed images only"
               build_all=0
@@ -78,8 +80,6 @@ jobs:
             if grep -q OracleLinuxDevelopers/oraclelinux8/compat "${changes}"; then
               echo "PUSH: oraclelinux8-compat:8-slim updated, rebuilding dependencies"
               compat=1
-            else
-              compat=0
             fi
           else
             echo "MANUAL: Rebuilding based on parameters"
