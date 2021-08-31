@@ -12,11 +12,12 @@ name: Build and publish Oracle Linux developer container images to GitHub Contai
 # Images are built for both amd64 and arm64 architectures, except for
 #   - oracledb images (not available on arm)
 #   - php and nodejs on OL7 (packages not available)
+# When the oraclelinux8-compat:8-slim container image is built, the images
+# based on it will be (re)built as well.
 on:
   push:
     branches:
       - main
-      - workflow
     paths:
       - 'OracleLinuxDevelopers/**'
       - '.github/workflows/build-and-push-dev-images.yml'
@@ -32,10 +33,10 @@ on:
         required: false
 
 # Default values for the builds triggered by the push event
+# Note: the "compat" image should *not* be in this list
 env:
   ol: 'oraclelinux7, oraclelinux8'
-  # lang: 'golang, nodejs, php, python, ruby'
-  lang: 'golang'
+  lang: 'golang, nodejs, php, python, ruby'
 
 jobs:
   prepare:
@@ -63,7 +64,7 @@ jobs:
           IFS=", " read -r -a lang_list <<< "${{ github.event.inputs.lang || env.lang}}"
           mapfile -t compat_list < <(cd oraclelinux8 && grep -l -- '^FROM.*oraclelinux8-compat:8-slim' */*/Dockerfile | sed -e 's!/.*!!' | sort -u)
           changes=$(mktemp)
-          # workflow is only in the workflow_dispatch event payload
+          # workflow is only set in the workflow_dispatch event payload
           workflow="${{ github.event.workflow }}"
           if [[ -z ${workflow} ]]; then
             # Push event - retrieve list of changed files
@@ -138,6 +139,7 @@ jobs:
           echo "::set-output name=matrix::${matrix}"
           echo "::set-output name=skip_build::${skip_build}"
           echo "::set-output name=compat::${compat}"
+
       - name: Lowercase repository owner
         id: repository_owner
         run: |
