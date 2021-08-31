@@ -4,5 +4,5 @@ FROM ghcr.io/oracle/oraclelinux:8
 
 # This adds microdnf to the normal image so that any automation that relies on
 # it being installed continues to work
-RUN dnf install -y microdnf &&  \
+RUN dnf install -y microdnf && \
     rm -rf /var/cache/dnf
